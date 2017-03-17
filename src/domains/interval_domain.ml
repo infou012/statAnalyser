@@ -23,13 +23,21 @@ let bound_neg (a:bound) : bound = match a with
                                                
 (* a x b *)
 let bound_mul (a:bound) (b:bound) : bound = match a,b with
-  | MINF,PINF | PINF,MINF -> invalid_arg "bound_mul" (* (+∞) + (−∞) *)
+  | MINF,PINF | PINF,MINF -> invalid_arg "bound_mul" (* (+∞) * (−∞) *)
   | MINF, Int i | Int i, MINF when Z.gt i Z.zero -> MINF
   | MINF, Int i | Int i, MINF when Z.lt i Z.zero -> PINF
   | PINF, Int i | Int i, PINF when Z.gt i Z.zero -> PINF
   | PINF, Int i | Int i, PINF when Z.lt i Z.zero -> MINF
   | _, Int i | Int i, _ when Z.equal i Z.zero -> Int  Z.zero
   | Int i, Int j -> Int (Z.mul i j)
+
+let bound_div (a:bound) (b:bound) : bound = match a,b with
+  | MINF,PINF | PINF,MINF -> invalid_arg "bound_div" (* (+∞) * (−∞) *)
+  | PINF,PINF -> Int Z.zero
+  | MINF, Int i -> if Z.gt i Z.zero then MINF else PINF
+  | PINF, Int i -> if Z.gt i Z.zero then PINF else MINF
+  | Int i, MINF | Int i, PINF -> Int Z.zero
+  | Int i, Int j -> Int (Z.div i j)
                         
 (* a + b *)
 let bound_add (a:bound) (b:bound) : bound = match a,b with
@@ -45,9 +53,9 @@ let bound_cmp (a:bound) (b:bound) : int = match a,b with
   | PINF,_ | _,MINF -> 1
   | Int i, Int j -> Z.compare i j
                               
-let min_bound (a,b) = if bound_cmp a b > 0 then b else a
+let min_bound a b = if bound_cmp a b > 0 then b else a
                                                          
-let max_bound (a,b) = if bound_cmp a b > 0 then a else b
+let max_bound a b = if bound_cmp a b > 0 then a else b
                                                          
                                                          
 let proj a (c, d) =
@@ -91,7 +99,7 @@ let const c = Itv (Int c, Int c)
                   
 (* interval: [a,b] *)
                   
-let rand a b = if Z.compare a b > 0 then Itv (Int b, Int a)
+let rand a b = if Z.compare a b > 0 then BOT
                else Itv (Int a, Int b)
                         
                         
@@ -116,13 +124,28 @@ let mul x y =
     (fun (a,b) (c,d) ->
       let ac, ad = proj a (c,d) in
       let bc, bd = proj b (c,d) in
-      Itv (min_bound ((min_bound (ac, ad)), (min_bound (bc, bd))),
-           max_bound ((max_bound (ac, ad)),(max_bound (bc, bd))))
+      Itv (min_bound (min_bound ac ad) (min_bound bc bd),
+           max_bound (max_bound ac ad) (max_bound bc bd))
     ) x y
-             
+
+(*  1 / [c,d]  *)                         
+let inv x = match x with
+  | BOT -> BOT
+  | Itv(a,b) -> Itv (bound_inv a, bound_inv b)
+                    
 (*  [a,b] / [c,d]  *)                         
-let div x y = y
-                
+let div x y =
+  lift2
+    (fun (a,b) (c,d) ->
+      let ac, ad = proj a (bound_inv c, bound_inv d) in
+      let bc, bd = proj b (bound_inv c, bound_inv d) in
+      if bound_cmp c (Int Z.one) > 0 then
+        Itv (min_bound ac ad, max_bound bc bd)
+      else if bound_cmp (Int Z.minus_one) d > 0 then
+        Itv (min_bound bc bd, max_bound ac ad)
+      else BOT
+    ) x y  
+    
 (*  [a,b] % [c,d]  *)                         
 let rem x y = y
                 
@@ -130,14 +153,14 @@ let rem x y = y
 
 let join x y : t = match x,y with
   | BOT, i | i, BOT -> i
-  | Itv (a,b), Itv (c,d) -> Itv (min_bound (a, c), max_bound (b, d))
+  | Itv (a,b), Itv (c,d) -> Itv (min_bound a c, max_bound b d)
   
                       
 let meet x y : t = match x, y with
   | BOT, i | i, BOT -> BOT
   | Itv (a,b), Itv (c,d) ->
-     let max = max_bound (a,c) in
-     let min = min_bound (b,d) in
+     let max = max_bound a c in
+     let min = min_bound b d in
      if bound_cmp max min > 0 then BOT else Itv (max, min)
         
 (* x ⊆ y in interval domain *)
@@ -176,7 +199,7 @@ let neq x y =
 let geq x y =
   match x, y with
   | BOT, _ | _, BOT -> x, y
-  | Itv (a,b), Itv (c,d) -> Itv (min_bound (a,c), b), Itv (c, min_bound (b,d)) 
+  | Itv (a,b), Itv (c,d) -> Itv (min_bound a c, b), Itv (c, min_bound b d) 
                                                         
 let gt x y =
   let x', y' = geq x y in
