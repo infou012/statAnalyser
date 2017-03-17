@@ -156,7 +156,7 @@ let is_bottom (x:t) : bool = match x with
 let print fmt x: unit =
   match x with
   | BOT -> Format.fprintf fmt "bottom"
-  | Itv (a,b) -> Format.fprintf fmt "[%s, %s]"
+  | Itv (a,b) -> Format.fprintf fmt "[%s;%s]"
                                 (bound_to_string a) (bound_to_string b)
 
       
@@ -174,7 +174,7 @@ let neq x y =
   | _, _ -> x, y
                             
 (* From constant domain *)
-                 (*
+   
 let geq x y =
   match x, y with
   | BOT, _ | _, BOT -> BOT, BOT
@@ -191,34 +191,19 @@ let gt a b =
   | Cst x, Cst y -> if (x>y) then a, b else BOT, BOT
   | TOP, _ | _, TOP -> a, b
                             
-                                                        
-(* operator dispatch *)
-                            
-let unary x op = match op with
+                                                                       
+(* unary operation *)
+let unary x unop : t =  match unop with
   | AST_UNARY_PLUS  -> x
   | AST_UNARY_MINUS -> neg x
-                           
-let binary x y op = match op with
+
+(* binary operation *)
+let binary x y binop : t = match binop with
   | AST_PLUS     -> add x y
   | AST_MINUS    -> sub x y
   | AST_MULTIPLY -> mul x y
   | AST_DIVIDE   -> div x y
   | AST_MODULO   -> rem x y
-                        
-let compare x y op = match op with
-  | AST_EQUAL         -> eq x y
-  | AST_NOT_EQUAL     -> neq x y
-  | AST_GREATER_EQUAL -> geq x y
-  | AST_GREATER       -> gt x y
-  | AST_LESS_EQUAL    -> let y',x' = geq y x in x',y'
-  | AST_LESS          -> let y',x' = gt y x in x',y'
-                                                    
-                  *)                                 
-(* unary operation *)
-let unary x unop : t = x
-
-(* binary operation *)
-let binary x y binop : t = y
         
 (* widening, for loops *)
 let widen x y : t = y
@@ -235,14 +220,18 @@ let widen x y : t = y
      *)
 
                      
-let compare x y op :(t * t) = x,y
+let compare x y op :(t * t) = match op with
+  | AST_EQUAL         -> eq x y
+  | AST_NOT_EQUAL     -> neq x y
+  | AST_GREATER_EQUAL -> geq x y
+  | AST_GREATER       -> gt x y
+  | AST_LESS_EQUAL    -> let y',x' = geq y x in x',y'
+  | AST_LESS          -> let y',x' = gt y x in x',y'
 
-
-
-    (* 
+(* 
        the following, more advanced operations are useful to handle
        complex tests more precisely
-     *)
+ *)
 
         
     (* backards unary operation *)
