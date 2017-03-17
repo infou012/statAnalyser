@@ -1,5 +1,5 @@
 {
   int x;
-  x = rand(1,10);
+  x = rand(-10,10);
   print(x);
 }

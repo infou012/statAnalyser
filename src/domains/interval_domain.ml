@@ -58,9 +58,9 @@ let min_bound a b = if bound_cmp a b > 0 then b else a
 let max_bound a b = if bound_cmp a b > 0 then a else b
                                                          
                                                          
-let proj a (c, d) =
-  let r1 = bound_mul a c in
-  let r2 = bound_mul a d in
+let proj f a (c, d) =
+  let r1 = f a c in
+  let r2 = f a d in
   r1, r2
         
 (* { [a, b] | a ≤ b } ∪ {⊥} *)
@@ -122,26 +122,21 @@ let sub x y =
 let mul x y =
   lift2
     (fun (a,b) (c,d) ->
-      let ac, ad = proj a (c,d) in
-      let bc, bd = proj b (c,d) in
+      let ac, ad = proj bound_mul a (c,d) in
+      let bc, bd = proj bound_mul b (c,d) in
       Itv (min_bound (min_bound ac ad) (min_bound bc bd),
            max_bound (max_bound ac ad) (max_bound bc bd))
     ) x y
-
-(*  1 / [c,d]  *)                         
-let inv x = match x with
-  | BOT -> BOT
-  | Itv(a,b) -> Itv (bound_inv a, bound_inv b)
                     
 (*  [a,b] / [c,d]  *)                         
 let div x y =
   lift2
     (fun (a,b) (c,d) ->
-      let ac, ad = proj a (bound_inv c, bound_inv d) in
-      let bc, bd = proj b (bound_inv c, bound_inv d) in
+      let ac, ad = proj bound_div a (c, d) in
+      let bc, bd = proj bound_div b (c, d) in
       if bound_cmp c (Int Z.one) > 0 then
         Itv (min_bound ac ad, max_bound bc bd)
-      else if bound_cmp (Int Z.minus_one) d > 0 then
+      else if bound_cmp (Int Z.minus_one) c > 0 then
         Itv (min_bound bc bd, max_bound ac ad)
       else BOT
     ) x y  
@@ -196,18 +191,17 @@ let neq x y =
     -> BOT, BOT
   | _, _ -> x, y
                                
-let geq x y =
+let leq x y =
   match x, y with
   | BOT, _ | _, BOT -> x, y
-  | Itv (a,b), Itv (c,d) -> Itv (min_bound a c, b), Itv (c, min_bound b d) 
+  | Itv (a,b),  Itv (c, d) -> if bound_cmp a d > 0 then BOT, BOT
+                              else Itv (a, min_bound b d),
+                                   Itv (max_bound a c, d)
                                                         
-let gt x y =
-  let x', y' = geq x y in
-  match x', y' with
-  | Itv (a,b), Itv (c,d) when bound_cmp a d = 0 ->
-     Itv (bound_add a (Int Z.one), b), y' 
-  | _, _ -> x', y'              
-                                                                       
+let lt x y =
+  let x', y' = leq x y in
+  x',y'
+                  
 (* unary operation *)
 let unary x unop : t =  match unop with
   | AST_UNARY_PLUS  -> x
@@ -239,10 +233,10 @@ let widen x y : t = y
 let compare x y op :(t * t) = match op with
   | AST_EQUAL         -> eq x y
   | AST_NOT_EQUAL     -> neq x y
-  | AST_GREATER_EQUAL -> geq x y
-  | AST_GREATER       -> gt x y
-  | AST_LESS_EQUAL    -> let y',x' = geq y x in x',y'
-  | AST_LESS          -> let y',x' = gt y x in x',y'
+  | AST_GREATER_EQUAL -> leq y x
+  | AST_GREATER       -> lt y x
+  | AST_LESS_EQUAL    -> leq x y
+  | AST_LESS          -> lt x y
 
 (* 
        the following, more advanced operations are useful to handle
