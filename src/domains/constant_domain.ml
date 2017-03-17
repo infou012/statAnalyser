@@ -199,13 +199,18 @@ module Constants = (struct
       (* r=x/y => (x=r*y + x%y ou y=r=0  and y = x/r or x=r=0*)
      let contains_zero o = subset (const Z.zero) o in
      (if contains_zero y && contains_zero r then x
-      else meet x (add (div r y) (rem x y))),
+      else meet x (add (mul r y) (rem x y))),
      (if contains_zero x && contains_zero r then y
             else meet y (div x r))
         
 
   | AST_MODULO ->
-     x, y
+     (* r=x%y => (x = r + (x/y)*y ou y=r=0*)
+     let contains_zero o = subset (const Z.zero) o in
+     (if contains_zero y && contains_zero r then x
+      else meet x (add r (mul (div x y) y))),
+     (if contains_zero x && contains_zero r then y
+            else meet y (div (sub x r) (div x r)))
         
       
 end : VALUE_DOMAIN)
