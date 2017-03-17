@@ -168,29 +168,22 @@ let eq x y =
  
 let neq x y =
   match x, y with
-  | BOT, i | i, BOT -> x, y
+  | BOT, _ | _, BOT -> BOT, BOT
   | Itv (a,b), Itv (c,d) when bound_cmp a c = 0 && bound_cmp b d = 0
     -> BOT, BOT
   | _, _ -> x, y
-                            
-(* From constant domain *)
-   
+                               
 let geq x y =
   match x, y with
-  | BOT, _ | _, BOT -> BOT, BOT
-  | Itv (a,b), Itv (c,d) when bound_cmp a c = 0 && bound_cmp b d = 0
-    -> BOT, BOT
-  | _, _ -> x, y
-              | Cst x, Cst y -> if (x>=y) then a, b else BOT, BOT
-  | TOP, _ | _, TOP -> a, b
-                            
-                            
-let gt a b =
-  match a, b with
-  | BOT, _ | _, BOT -> BOT, BOT
-  | Cst x, Cst y -> if (x>y) then a, b else BOT, BOT
-  | TOP, _ | _, TOP -> a, b
-                            
+  | BOT, _ | _, BOT -> x, y
+  | Itv (a,b), Itv (c,d) -> Itv (min_bound (a,c), b), Itv (c, min_bound (b,d)) 
+                                                        
+let gt x y =
+  let x', y' = geq x y in
+  match x', y' with
+  | Itv (a,b), Itv (c,d) when bound_cmp a d = 0 ->
+     Itv (bound_add a (Int Z.one), b), y' 
+  | _, _ -> x', y'              
                                                                        
 (* unary operation *)
 let unary x unop : t =  match unop with
