@@ -134,7 +134,7 @@ let mul x y =
 [a,b] / [c,d] = [min(a/c, a/d), max(b/c, b/d)] si 1 ≤ c] or
 [a,b] / [c,d] = [min(b/c, b/d), max(a/c, a/d)] si d ≤ −1
  *)
-
+(*** To be continued ***)
 let div x y =
   lift2
     (fun (a,b) (c,d) ->
