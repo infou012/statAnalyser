@@ -128,7 +128,13 @@ let mul x y =
            max_bound (max_bound ac ad) (max_bound bc bd))
     ) x y
                     
-(*  [a,b] / [c,d]  *)                         
+(*  [a,b] / [c,d]  *)
+(*
+([a, b] / ([c, d] ∩ [1, +∞])) ∪ ([a, b] / ([c, d] ∩ [−∞, −1])) with
+[a,b] / [c,d] = [min(a/c, a/d), max(b/c, b/d)] si 1 ≤ c] or
+[a,b] / [c,d] = [min(b/c, b/d), max(a/c, a/d)] si d ≤ −1
+ *)
+
 let div x y =
   lift2
     (fun (a,b) (c,d) ->
@@ -136,9 +142,9 @@ let div x y =
       let bc, bd = proj bound_div b (c, d) in
       if bound_cmp c (Int Z.one) > 0 then
         Itv (min_bound ac ad, max_bound bc bd)
-      else if bound_cmp (Int Z.minus_one) c > 0 then
+      else if bound_cmp (Int Z.minus_one) d > 0 then
         Itv (min_bound bc bd, max_bound ac ad)
-      else BOT
+      else BOT 
     ) x y  
     
 (*  [a,b] % [c,d] **TODO  *)                         
