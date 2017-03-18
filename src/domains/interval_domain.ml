@@ -141,7 +141,7 @@ let div x y =
       else BOT
     ) x y  
     
-(*  [a,b] % [c,d]  *)                         
+(*  [a,b] % [c,d] **TODO  *)                         
 let rem x y = y
                 
 (* set-theoretic operations *)
@@ -215,7 +215,7 @@ let binary x y binop : t = match binop with
   | AST_DIVIDE   -> div x y
   | AST_MODULO   -> rem x y
         
-(* widening, for loops *)
+(* widening, for loops TODO *)
 let widen x y : t = y
 
 
@@ -238,7 +238,7 @@ let compare x y op :(t * t) = match op with
   | AST_LESS_EQUAL    -> leq x y
   | AST_LESS          -> lt x y
 
-(* 
+(* TODO
        the following, more advanced operations are useful to handle
        complex tests more precisely
  *)
