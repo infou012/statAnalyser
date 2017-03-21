@@ -102,6 +102,32 @@ let const c = Itv (Int c, Int c)
 let rand a b = if Z.compare a b > 0 then BOT
                else Itv (Int a, Int b)
                         
+(* set-theoretic operations *)
+
+let join x y : t = match x,y with
+  | BOT, i | i, BOT -> i
+  | Itv (a,b), Itv (c,d) -> Itv (min_bound a c, max_bound b d)
+  
+                      
+let meet x y : t = match x, y with
+  | BOT, i | i, BOT -> BOT
+  | Itv (a,b), Itv (c,d) ->
+     let max = max_bound a c in
+     let min = min_bound b d in
+     if bound_cmp max min > 0 then BOT else Itv (max, min)
+        
+(* x ⊆ y in interval domain *)
+                                                
+let subset (x:t) (y:t) : bool = match x,y with
+| BOT,_ -> true
+| _,BOT -> false
+| Itv (a,b), Itv (c,d) -> bound_cmp a c >=0 && bound_cmp b d <= 0
+
+ (* emptyness testing *)
+let is_bottom (x:t) : bool = match x with
+  | BOT -> true
+  | _ -> false
+        
                         
 (* arithmetic operations in interval domain*)
                         
@@ -134,48 +160,26 @@ let mul x y =
 [a,b] / [c,d] = [min(a/c, a/d), max(b/c, b/d)] si 1 ≤ c] or
 [a,b] / [c,d] = [min(b/c, b/d), max(a/c, a/d)] si d ≤ −1
  *)
-(*** To be continued ***)
+
 let div x y =
-  lift2
-    (fun (a,b) (c,d) ->
-      let ac, ad = proj bound_div a (c, d) in
-      let bc, bd = proj bound_div b (c, d) in
-      if bound_cmp c (Int Z.one) > 0 then
-        Itv (min_bound ac ad, max_bound bc bd)
-      else if bound_cmp (Int Z.minus_one) d > 0 then
-        Itv (min_bound bc bd, max_bound ac ad)
-      else BOT 
-    ) x y  
-    
+  let y_pos = meet y (Itv (Int Z.one, PINF)) in
+  let y_neg = meet y (Itv (MINF, Int Z.minus_one)) in
+  let div_pos = lift2
+                  (fun (a,b) (c,d) ->
+                    let ac, ad = proj bound_div a (c, d) in
+                    let bc, bd = proj bound_div b (c, d) in
+                    Itv (min_bound ac ad, max_bound bc bd)) x y_pos in
+  let div_neg = lift2
+                  (fun (a,b) (c,d) ->
+                    let ac, ad = proj bound_div a (c, d) in
+                    let bc, bd = proj bound_div b (c, d) in
+                    Itv (min_bound bc bd, max_bound ac ad)) x y_neg
+  in
+  join div_pos div_neg
+   
 (*  [a,b] % [c,d] **TODO  *)                         
 let rem x y = y
                 
-(* set-theoretic operations *)
-
-let join x y : t = match x,y with
-  | BOT, i | i, BOT -> i
-  | Itv (a,b), Itv (c,d) -> Itv (min_bound a c, max_bound b d)
-  
-                      
-let meet x y : t = match x, y with
-  | BOT, i | i, BOT -> BOT
-  | Itv (a,b), Itv (c,d) ->
-     let max = max_bound a c in
-     let min = min_bound b d in
-     if bound_cmp max min > 0 then BOT else Itv (max, min)
-        
-(* x ⊆ y in interval domain *)
-                                                
-let subset (x:t) (y:t) : bool = match x,y with
-| BOT,_ -> true
-| _,BOT -> false
-| Itv (a,b), Itv (c,d) -> bound_cmp a c >=0 && bound_cmp b d <= 0
-
- (* emptyness testing *)
-let is_bottom (x:t) : bool = match x with
-  | BOT -> true
-  | _ -> false
-        
 (* print abstract element *)
 let print fmt x: unit =
   match x with
