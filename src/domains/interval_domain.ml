@@ -173,7 +173,7 @@ let div x y =
                   (fun (a,b) (c,d) ->
                     let ac, ad = proj bound_div a (c, d) in
                     let bc, bd = proj bound_div b (c, d) in
-                    Itv (min_bound bc bd, max_bound ac ad)) x y_neg
+                    Itv (min_bound bc bd, max_bound ac ad)) x y_pos
   in
   join div_pos div_neg
    
@@ -197,6 +197,8 @@ let eq x y =
 let neq x y =
   match x, y with
   | BOT, _ | _, BOT -> BOT, BOT
+  | Itv (a,b), Itv (c,d) when bound_cmp b c = 0
+    -> Itv (a, bound_add b (Int Z.minus_one)), y
   | Itv (a,b), Itv (c,d) when bound_cmp a c = 0 && bound_cmp b d = 0
     -> BOT, BOT
   | _, _ -> x, y
@@ -209,9 +211,13 @@ let leq x y =
                                    Itv (max_bound a c, d)
                                                         
 let lt x y =
-  let x', y' = leq x y in
-  x',y'
-                  
+  match x, y with
+  | BOT, _ | _, BOT -> x, y
+  | Itv (a,b),  Itv (c, d) ->
+     if bound_cmp a d > 0 then BOT, BOT
+     else Itv (a, min_bound b (bound_add d (Int Z.minus_one))),
+          Itv (max_bound (bound_add a (Int Z.one)) c, d)
+                     
 (* unary operation *)
 let unary x unop : t =  match unop with
   | AST_UNARY_PLUS  -> x
