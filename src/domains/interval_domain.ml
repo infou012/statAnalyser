@@ -202,14 +202,8 @@ let neq x y =
   | Itv (a,b), Itv (c,d) when bound_cmp a c = 0 && bound_cmp b d = 0
     -> BOT, BOT
   | _, _ -> x, y
-                               
-let leq x y =
-  match x, y with
-  | BOT, _ | _, BOT -> x, y
-  | Itv (a,b),  Itv (c, d) -> if bound_cmp a d > 0 then BOT, BOT
-                              else Itv (a, min_bound b d),
-                                   Itv (max_bound a c, d)
-                                                        
+
+
 let lt x y =
   match x, y with
   | BOT, _ | _, BOT -> x, y
@@ -217,7 +211,14 @@ let lt x y =
      if bound_cmp a d > 0 then BOT, BOT
      else Itv (a, min_bound b (bound_add d (Int Z.minus_one))),
           Itv (max_bound (bound_add a (Int Z.one)) c, d)
-                     
+              
+let leq x y =
+  match x, y with
+  | BOT, _ | _, BOT -> x, y
+  | Itv (a,b),  Itv (c, d) -> if bound_cmp a d > 0 then BOT, BOT
+                              else Itv (a, min_bound b d),
+                                   Itv (max_bound a c, d)
+                                                            
 (* unary operation *)
 let unary x unop : t =  match unop with
   | AST_UNARY_PLUS  -> x
