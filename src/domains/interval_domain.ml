@@ -173,7 +173,7 @@ let div x y =
                   (fun (a,b) (c,d) ->
                     let ac, ad = proj bound_div a (c, d) in
                     let bc, bd = proj bound_div b (c, d) in
-                    Itv (min_bound bc bd, max_bound ac ad)) x y_pos
+                    Itv (min_bound bc bd, max_bound ac ad)) x y_neg
   in
   join div_pos div_neg
    
